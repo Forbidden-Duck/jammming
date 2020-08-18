@@ -8,16 +8,22 @@ import Spotify from "../../Util/Spotify";
 class App extends React.Component {
   constructor(props) {
     super(props);
+
+    // Storage
+    const cacheSearch = localStorage.getItem("searchResults");
+    const cachePlaylist = localStorage.getItem("playlist");
+
     this.state = {
-      searchResults: [],
-      playlistName: "New Playlist",
-      playlistTracks: [],
+      searchResults: cacheSearch ? JSON.parse(cacheSearch).tracks : [],
+      playlistName: cachePlaylist ? JSON.parse(cachePlaylist).name || "New Playlist" : "New Playlist",
+      playlistTracks: cachePlaylist ? JSON.parse(cachePlaylist).tracks : [],
       playlistSaved: true
     };
     this.addTrack = this.addTrack.bind(this);
     this.removeTrack = this.removeTrack.bind(this);
     this.updatePlaylistName = this.updatePlaylistName.bind(this);
     this.savePlaylist = this.savePlaylist.bind(this);
+    this.findPlaylist = this.findPlaylist.bind(this);
     this.search = this.search.bind(this);
   }
 
@@ -29,12 +35,20 @@ class App extends React.Component {
 
     tracks.push(track);
     this.setState({ playlistTracks: tracks });
+    localStorage.setItem("playlist", JSON.stringify({
+      name: this.state.playlistName,
+      tracks: tracks
+    }));
   }
 
   removeTrack(track) {
     let tracks = this.state.playlistTracks;
     tracks = tracks.filter(item => item.id !== track.id);
     this.setState({ playlistTracks: tracks });
+    localStorage.setItem("playlist", JSON.stringify({
+      name: this.state.playlistName,
+      tracks: tracks
+    }));
   }
 
   updatePlaylistName(name) {
@@ -42,6 +56,10 @@ class App extends React.Component {
   }
 
   savePlaylist() {
+    if (!this.state.playlistTracks || this.state.playlistTracks.length < 1) {
+      return;
+    }
+
     this.setState({ playlistSaved: false });
     const trackURIs = this.state.playlistTracks.map(track => track.uri);
     Spotify.savePlaylist(this.state.playlistName, trackURIs)
@@ -53,9 +71,19 @@ class App extends React.Component {
       });
   }
 
+  findPlaylist(name) {
+    Spotify.findPlaylistTracks(name)
+      .then(playlist => {
+        this.setState({
+          playlistTracks: playlist
+        });
+      })
+  }
+
   search(term) {
     Spotify.search(term).then(res => {
       this.setState({ searchResults: res });
+      localStorage.setItem("searchResults", JSON.stringify({ tracks: res }))
     });
   }
 
@@ -76,7 +104,8 @@ class App extends React.Component {
               playlistSaved={this.state.playlistSaved}
               onRemove={this.removeTrack}
               onNameChange={this.updatePlaylistName}
-              onSave={this.savePlaylist} />
+              onSave={this.savePlaylist}
+              onFind={this.findPlaylist} />
           </div>
         </div>
       </div>
