@@ -6,7 +6,9 @@ class Tracklist extends React.Component {
     render() {
         return (
             <div className="Tracklist">
-                {this.props.tracks && this.props.tracks.map(track => {
+                {this.props.tracks && this.props.tracks
+                .filter(track => !this.props.filter || !this.props.filter.find(item => item.id === track.id))
+                .map(track => {
                     return <Track
                         key={track.id}
                         track={track}
