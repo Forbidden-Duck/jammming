@@ -1,32 +1,22 @@
 import { ClientID, RedirectURI } from "../spotifytokens.json";
-let accessToken;
 
 const Spotify = {
-    getAccessToken() {
+    getAccessToken(saveParam) {
+        const accessToken = localStorage.getItem("accessToken");
         if (accessToken) {
             return accessToken;
         }
-
-        // Check user access token match
-        const accessTokenMatch = window.location.href.match(/access_token=([^&]*)/);
-        const expiresMatch = window.location.href.match(/expires_in=([^&]*)/);
-
-        if (accessTokenMatch && expiresMatch) {
-            accessToken = accessTokenMatch[1];
-            const expiresIn = Number(expiresMatch[1]);
-            // Clear parameters to allow for a new access token once expired
-            window.setTimeout(() => accessToken = "", expiresIn * 1000);
-            window.history.pushState("Access Token", null, "/");
-            return accessToken;
-        } else {
-            window.location =
-                `https://accounts.spotify.com/authorize?client_id=${ClientID}&response_type=token` +
-                `&scope=playlist-modify-public playlist-read-private&redirect_uri=${RedirectURI}`;
+        if (saveParam) {
+            localStorage.setItem(saveParam.name, saveParam.value);
         }
+
+        window.location =
+            `https://accounts.spotify.com/authorize?client_id=${ClientID}&response_type=token` +
+            `&scope=playlist-modify-public playlist-read-private&redirect_uri=${RedirectURI}`;
     },
 
     search(term) {
-        const accessToken = this.getAccessToken();
+        const accessToken = this.getAccessToken({ name: "term", value: term });
         return fetch(`https://api.spotify.com/v1/search?type=track&q=${term}`, {
             headers: {
                 "Authorization": `Bearer ${accessToken}`
@@ -54,7 +44,7 @@ const Spotify = {
             return;
         }
 
-        const accessToken = Spotify.getAccessToken();
+        const accessToken = Spotify.getAccessToken({ name: "findPlaylist", value: name });
         const headers = { Authorization: `Bearer ${accessToken}` };
         let userID;
 
@@ -135,7 +125,7 @@ const Spotify = {
                 // Filter
                 trackURIs = trackURIs.filter(item => !playlistTracks.find(track => track.uri === item));
 
-                const accessToken = Spotify.getAccessToken();
+                const accessToken = Spotify.getAccessToken({ name: "savePlaylist", value: true });
                 const headers = { Authorization: `Bearer ${accessToken}` };
                 let userID;
 
@@ -163,7 +153,7 @@ const Spotify = {
                 return Spotify.updatePlaylist(name, trackURIs);
             }
 
-            const accessToken = Spotify.getAccessToken();
+            const accessToken = Spotify.getAccessToken({ name: "savePlaylist", value: true });
             const headers = { Authorization: `Bearer ${accessToken}` };
             let userID;
 

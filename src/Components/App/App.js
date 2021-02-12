@@ -27,8 +27,37 @@ class App extends React.Component {
     this.search = this.search.bind(this);
   }
 
+  componentDidMount() {
+    // Check user access token match
+    const accessTokenMatch = window.location.href.match(/access_token=([^&]*)/);
+    const expiresMatch = window.location.href.match(/expires_in=([^&]*)/);
+
+    if (accessTokenMatch && expiresMatch) {
+      const accessToken = accessTokenMatch[1];
+      const expiresIn = Number(expiresMatch[1]);
+      // Clear parameters to allow for a new access token once expired
+      window.setTimeout(() => localStorage.removeItem("accessToken"), expiresIn * 1000);
+      window.history.pushState("Access Token", null, "/");
+      localStorage.setItem("accessToken", accessToken);
+    }
+
+    // Find Playlist
+    const cacheFindPlaylist = localStorage.getItem("findPlaylist");
+    if (cacheFindPlaylist) {
+      this.findPlaylist(cacheFindPlaylist);
+      localStorage.removeItem("findPlaylist");
+    }
+
+    // Save Playlist
+    const cacheSavePlaylist = localStorage.getItem("savePlaylist");
+    if (cacheSavePlaylist) {
+      this.savePlaylist();
+      localStorage.removeItem("savePlaylist");
+    }
+  }
+
   addTrack(track) {
-    let tracks = this.state.playlistTracks;
+    let tracks = this.state.playlistTracks || [];
     if (tracks.find(item => item.id === track.id)) {
       return
     }
@@ -42,7 +71,7 @@ class App extends React.Component {
   }
 
   removeTrack(track) {
-    let tracks = this.state.playlistTracks;
+    let tracks = this.state.playlistTracks || [];
     tracks = tracks.filter(item => item.id !== track.id);
     this.setState({ playlistTracks: tracks });
     localStorage.setItem("playlist", JSON.stringify({
@@ -68,6 +97,10 @@ class App extends React.Component {
           playlistTracks: [],
           playlistSaved: true
         });
+        localStorage.setItem("playlist", JSON.stringify({
+          name: this.state.playlistName,
+          tracks: this.state.playlistTracks
+        }));
       });
   }
 
@@ -77,11 +110,17 @@ class App extends React.Component {
         this.setState({
           playlistTracks: playlist
         });
+        localStorage.setItem("playlist", JSON.stringify({
+          name: this.state.playlistName,
+          tracks: this.state.playlistTracks
+        }));
       })
   }
 
   search(term) {
     Spotify.search(term).then(res => {
+      const playlistTracks = this.state.playlistTracks || [];
+      res.filter(item => !(playlistTracks.find(item2 => item2.id === item.id)));
       this.setState({ searchResults: res });
       localStorage.setItem("searchResults", JSON.stringify({ tracks: res }))
     });
